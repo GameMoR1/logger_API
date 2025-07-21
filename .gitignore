@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+.env/
+
+# VSCode
+.vscode/
+
+# Credentials and tokens
+credentials.json
+token.json
+
+# Trash and temp
+__trash__/
+/tmp/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Ignore static in root (legacy)
+/static/
+
+# Ignore old root code files
+constants.py
+gdrive_logger.py
+api.py
+
+# Ignore test output
+htmlcov/
+coverage.xml
+
+# Ignore Jupyter
+.ipynb_checkpoints/

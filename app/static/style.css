@@ -1,0 +1,58 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+body.dark {
+    background: linear-gradient(135deg, #191724 0%, #232526 100%);
+    color: #ececec;
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+}
+h1 {
+    margin-top: 0;
+    font-weight: 700;
+    font-size: 2.2em;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, #ffb86c 0%, #8be9fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+canvas {
+    margin: 40px auto 0 auto;
+    display: block;
+    background: #232526;
+    border-radius: 12px;
+    box-shadow: 0 2px 18px #0004;
+    padding: 16px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.container {
+    max-width: 900px;
+    margin: 40px auto 0 auto;
+    background: rgba(30, 32, 40, 0.98);
+    border-radius: 18px;
+    padding: 36px 32px 32px 32px;
+    box-shadow: 0 6px 40px #000a;
+    transition: background 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    background: #232526;
+}
+::-webkit-scrollbar-thumb {
+    background: #35374b;
+    border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #44465a;
+}
