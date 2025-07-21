@@ -7,8 +7,44 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Логи файлов (LogerAPI)</h1>
-    <canvas id="logChart" width="800" height="400"></canvas>
+    <div class="container">
+        <h1>Логи файлов (LogerAPI)</h1>
+        <div class="summary-block">
+            <span id="totalFiles">Всего файлов: 0</span>
+            <span id="totalDuration">Общее время: 0 сек</span>
+        </div>
+        <div class="filters">
+            <input type="text" id="filenameFilter" placeholder="Фильтр по имени файла">
+            <input type="date" id="dateFilter">
+            <button onclick="applyFilters()">Фильтровать</button>
+            <button onclick="resetFilters()">Сбросить</button>
+        </div>
+        <div class="charts">
+            <canvas id="logChart" width="800" height="300"></canvas>
+            <canvas id="histChart" width="800" height="200"></canvas>
+        </div>
+        <div id="logsTableContainer">
+            <h2>Список логов</h2>
+            <table id="logsTable">
+                <thead>
+                    <tr>
+                        <th>Время</th>
+                        <th>Имя файла</th>
+                        <th>Длительность</th>
+                        <th>Размер</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="logModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <pre id="logText"></pre>
+            </div>
+        </div>
+    </div>
     <script src="/static/script.js"></script>
 </body>
 </html>
