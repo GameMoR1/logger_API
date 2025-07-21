@@ -38,7 +38,7 @@ sudo systemctl enable ${SERVICE_NAME}
 sudo systemctl restart ${SERVICE_NAME}
 
 API_URL="http://${EXT_IP}:${PORT}/"
-API_DOCS_URL="http://${EXT_IP}:${PORT}/docs"
 
+echo "ip: ${EXT_IP}"
 echo "Logger API теперь доступен на порту ${PORT} и будет запускаться автоматически при старте системы."
 echo "Откройте в браузере: $API_URL"

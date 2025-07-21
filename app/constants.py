@@ -1,0 +1,7 @@
+# constants.py
+GOOGLE_CREDENTIALS_FILE = 'credentials.json'
+GOOGLE_TOKEN_FILE = 'token.json'
+GOOGLE_DRIVE_FOLDER_NAME = 'LogerAPI_Logs'
+DATE_FORMAT = '%Y-%m-%d'
+LOG_FILE_EXTENSION = '.txt'
+UI_UPDATE_INTERVAL_MS = 1000

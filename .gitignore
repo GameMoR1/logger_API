@@ -1,42 +1,53 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
+*.pyc
+*.pdb
+*.egg-info/
+.eggs/
+*.egg
 
-# Virtual env
+# Virtualenv
+.venv/
 venv/
+ENV/
 .env/
 
 # VSCode
 .vscode/
 
-# Credentials and tokens
-credentials.json
-token.json
-
-# Trash and temp
-__trash__/
-/tmp/
-
-# System
+# OS
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
 
-# Ignore static in root (legacy)
-/static/
+# Credentials
+credentials.json
+token.json
+*.token.json
 
-# Ignore old root code files
-constants.py
-gdrive_logger.py
-api.py
+# Systemd/Service
+*.service
 
-# Ignore test output
+# Jupyter
+.ipynb_checkpoints/
+
+# Backup
+*.bak
+*.swp
+
+# Misc
+*.sqlite3
+*.db
+
+# Trash and temp
+__trash__/
+tmp/
+
+# Test output
 htmlcov/
 coverage.xml
-
-# Ignore Jupyter
-.ipynb_checkpoints/
