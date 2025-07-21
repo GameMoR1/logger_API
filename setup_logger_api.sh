@@ -9,6 +9,9 @@ SERVICE_NAME=logger_api
 USER=$(whoami)
 WORKDIR=$(cd "$(dirname "$0")" && pwd)
 
+# Получить внешний IP
+EXT_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
+
 # 1. Открыть порт через UFW
 sudo ufw allow ${PORT}/tcp
 sudo ufw reload
@@ -22,7 +25,7 @@ After=network.target
 [Service]
 User=${USER}
 WorkingDirectory=${WORKDIR}
-ExecStart=$(which uvicorn) main:app --host 0.0.0.0 --port ${PORT}
+ExecStart=$(which uvicorn) main:app --host ${EXT_IP} --port ${PORT}
 Restart=always
 
 [Install]
@@ -33,9 +36,6 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 sudo systemctl enable ${SERVICE_NAME}
 sudo systemctl restart ${SERVICE_NAME}
-
-# Получить внешний IP
-EXT_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
 
 API_URL="http://${EXT_IP}:${PORT}/"
 API_DOCS_URL="http://${EXT_IP}:${PORT}/docs"
