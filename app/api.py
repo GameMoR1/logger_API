@@ -222,6 +222,9 @@ async def get_settings():
 
 @app.post('/api/settings')
 async def save_settings(data: dict = Body(...)):
+    import os
+    if not os.path.isdir('../whisper_API_que') or not os.path.isdir('../whisper_API_que/.git'):
+        return JSONResponse(content={'error': 'Локальный git-репозиторий ../whisper_API_que не найден. Склонируйте репозиторий перед сохранением.'}, status_code=500)
     text = f'''# Все основные константы для настройки сервиса\n\nMODEL_NAMES = {repr(data.get('modelNames', []))}\n\nWEBHOOK_INTERVAL = {int(data.get('webhookInterval', 600))}  # 10 минут\n\nWEBHOOK_ENABLED = {bool(data.get('webhookEnabled', True))}\n\nWEBHOOK_URL = {repr(data.get('webhookUrl', ''))}\n\nLOGGER_API_URL = {repr(data.get('loggerApiUrl', ''))}\n'''
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         f.write(text)
@@ -229,6 +232,8 @@ async def save_settings(data: dict = Body(...)):
         subprocess.run(['git', '-C', '../whisper_API_que', 'add', 'core/config.py'], check=True)
         subprocess.run(['git', '-C', '../whisper_API_que', 'commit', '-m', 'Update config.py via web UI'], check=True)
         subprocess.run(['git', '-C', '../whisper_API_que', 'push'], check=True)
+    except subprocess.CalledProcessError as e:
+        return JSONResponse(content={'error': f'Ошибка git: {e}. Вывод: {e.output if hasattr(e, "output") else ""}'}, status_code=500)
     except Exception as e:
         return JSONResponse(content={'error': f'Ошибка git: {e}'}, status_code=500)
     return {'status': 'ok'}
