@@ -382,6 +382,46 @@ window.onload = async function() {
             };
         }
     });
+
+
+    // Runpod status fetch
+    let lastOnline = null;
+    async function updateRunpodStatus() {
+        const statusSpan = document.getElementById('runpodStatus');
+        const lastOnlineSpan = document.getElementById('runpodLastOnline');
+        try {
+            statusSpan.textContent = 'Проверка...';
+            statusSpan.classList.remove('on', 'off');
+            const resp = await fetch('https://3xd93p62vxzrvx-8000.proxy.runpod.net/api/status');
+            const data = await resp.json();
+            if (data && data.status === true) {
+                statusSpan.textContent = 'Включен';
+                statusSpan.classList.add('on');
+                lastOnline = new Date();
+            } else {
+                statusSpan.textContent = 'Выключен';
+                statusSpan.classList.add('off');
+            }
+        } catch (e) {
+            statusSpan.textContent = 'Выключен';
+            statusSpan.classList.add('off');
+        }
+        if (lastOnline) {
+            lastOnlineSpan.textContent = 'Последний онлайн: ' + formatDateTimeShort(lastOnline);
+        } else {
+            lastOnlineSpan.textContent = '';
+        }
+    }
+    // Краткий формат даты/времени
+    function formatDateTimeShort(dt) {
+        const d = new Date(dt);
+        if (isNaN(d.getTime())) return '';
+        const pad = n => n.toString().padStart(2, '0');
+        return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    updateRunpodStatus();
+    setInterval(updateRunpodStatus, 15000); // обновлять статус каждые 15 секунд
+
     loadLogs();
     await updateCharts();
     await refreshTableAndSummary();

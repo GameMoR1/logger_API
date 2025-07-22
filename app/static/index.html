@@ -24,6 +24,12 @@
             <canvas id="logChart" width="800" height="300"></canvas>
             <canvas id="histChart" width="800" height="200"></canvas>
         </div>
+        <div id="runpodStatusBlock" class="runpod-status-block">
+            <span class="runpod-title">runpod Whisper API</span>
+            <span id="runpodStatus" class="runpod-status">Проверка...</span>
+            <button id="runpodGoBtn" class="open-log-btn runpod-go-btn" onclick="window.open('https://3xd93p62vxzrvx-8000.proxy.runpod.net/', '_blank')">Перейти</button>
+            <span id="runpodLastOnline" class="runpod-last-online"></span>
+        </div>
         <div id="logsTableContainer">
             <h2>Список логов</h2>
             <table id="logsTable">

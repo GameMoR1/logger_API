@@ -1,3 +1,56 @@
+/* Runpod status block */
+.runpod-status-block {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    background: #232526;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px #0003;
+    padding: 18px 24px;
+    margin-bottom: 38px;
+    margin-top: 24px;
+    font-size: 1.18em;
+}
+.runpod-last-online {
+    margin-left: 18px;
+    color: #8be9fd;
+    font-size: 0.98em;
+    font-weight: 500;
+    min-width: 120px;
+    text-align: right;
+}
+.runpod-title {
+    font-weight: 700;
+    color: #8be9fd;
+    font-size: 1.18em;
+}
+.runpod-status {
+    font-weight: 600;
+    font-size: 1.1em;
+    padding: 4px 14px;
+    border-radius: 8px;
+    background: #35374b;
+    color: #ff5555;
+    margin-left: 8px;
+    margin-right: 8px;
+    min-width: 90px;
+    text-align: center;
+    transition: background 0.2s, color 0.2s;
+}
+.runpod-status.on {
+    background: #8be9fd;
+    color: #232526;
+}
+.runpod-status.off {
+    background: #35374b;
+    color: #ff5555;
+}
+.runpod-go-btn {
+    min-width: 110px;
+    font-size: 1em;
+    margin-left: 8px;
+}
 body {
     font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
     background: linear-gradient(135deg, #191724 0%, #232526 100%);
