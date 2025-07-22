@@ -11,6 +11,7 @@ import importlib.util
 import sys
 import subprocess
 import requests
+import base64
 
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='app/static'), name='static')
@@ -193,6 +194,9 @@ async def delete_log(file_id: str = Query(...)):
 
 CONFIG_PATH = '../whisper_API_que/core/config.py'  # путь к файлу в другом репозитории
 CONFIG_GITHUB_URL = 'https://raw.githubusercontent.com/GameMoR1/whisper_API_que/main/core/config.py'
+GITHUB_TOKEN_PATH = '.github_token'
+GITHUB_REPO = 'GameMoR1/whisper_API_que'
+GITHUB_CONFIG_PATH = 'core/config.py'
 
 # --- API для настроек ---
 @app.get('/api/settings')
@@ -222,21 +226,34 @@ async def get_settings():
 
 @app.post('/api/settings')
 async def save_settings(data: dict = Body(...)):
-    import os
-    if not os.path.isdir('../whisper_API_que') or not os.path.isdir('../whisper_API_que/.git'):
-        return JSONResponse(content={'error': 'Локальный git-репозиторий ../whisper_API_que не найден. Склонируйте репозиторий перед сохранением.'}, status_code=500)
-    text = f'''# Все основные константы для настройки сервиса\n\nMODEL_NAMES = {repr(data.get('modelNames', []))}\n\nWEBHOOK_INTERVAL = {int(data.get('webhookInterval', 600))}  # 10 минут\n\nWEBHOOK_ENABLED = {bool(data.get('webhookEnabled', True))}\n\nWEBHOOK_URL = {repr(data.get('webhookUrl', ''))}\n\nLOGGER_API_URL = {repr(data.get('loggerApiUrl', ''))}\n'''
-    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
-        f.write(text)
+    import time
+    # Читаем токен
     try:
-        subprocess.run(['git', '-C', '../whisper_API_que', 'add', 'core/config.py'], check=True)
-        subprocess.run(['git', '-C', '../whisper_API_que', 'commit', '-m', 'Update config.py via web UI'], check=True)
-        subprocess.run(['git', '-C', '../whisper_API_que', 'push'], check=True)
-    except subprocess.CalledProcessError as e:
-        return JSONResponse(content={'error': f'Ошибка git: {e}. Вывод: {e.output if hasattr(e, "output") else ""}'}, status_code=500)
-    except Exception as e:
-        return JSONResponse(content={'error': f'Ошибка git: {e}'}, status_code=500)
-    return {'status': 'ok'}
+        with open(GITHUB_TOKEN_PATH, 'r', encoding='utf-8') as f:
+            token = f.read().strip()
+    except Exception:
+        return JSONResponse(content={'error': 'Файл .github_token не найден или не читается. Положите ваш GitHub Personal Access Token в .github_token'}, status_code=500)
+    # Получаем sha текущего файла
+    headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
+    api_url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_CONFIG_PATH}'
+    resp = requests.get(api_url, headers=headers)
+    if resp.status_code == 200:
+        sha = resp.json().get('sha')
+    else:
+        return JSONResponse(content={'error': f'Не удалось получить sha файла config.py из GitHub: {resp.text}'}, status_code=500)
+    # Готовим новый контент
+    text = f'''# Все основные константы для настройки сервиса\n\nMODEL_NAMES = {repr(data.get('modelNames', []))}\n\nWEBHOOK_INTERVAL = {int(data.get('webhookInterval', 600))}  # 10 минут\n\nWEBHOOK_ENABLED = {bool(data.get('webhookEnabled', True))}\n\nWEBHOOK_URL = {repr(data.get('webhookUrl', ''))}\n\nLOGGER_API_URL = {repr(data.get('loggerApiUrl', ''))}\n'''
+    content_b64 = base64.b64encode(text.encode('utf-8')).decode('utf-8')
+    payload = {
+        'message': f'Update config.py via web UI {time.strftime("%Y-%m-%d %H:%M:%S")}',
+        'content': content_b64,
+        'sha': sha
+    }
+    put_resp = requests.put(api_url, headers=headers, json=payload)
+    if put_resp.status_code in (200, 201):
+        return {'status': 'ok'}
+    else:
+        return JSONResponse(content={'error': f'Ошибка обновления config.py через GitHub API: {put_resp.text}'}, status_code=500)
 
 @app.post('/api/settings/rollback')
 async def rollback_settings():
