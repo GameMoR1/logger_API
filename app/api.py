@@ -10,6 +10,7 @@ import os
 import importlib.util
 import sys
 import subprocess
+import requests
 
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='app/static'), name='static')
@@ -191,21 +192,33 @@ async def delete_log(file_id: str = Query(...)):
     return {"status": "deleted"}
 
 CONFIG_PATH = '../whisper_API_que/core/config.py'  # путь к файлу в другом репозитории
+CONFIG_GITHUB_URL = 'https://raw.githubusercontent.com/GameMoR1/whisper_API_que/main/core/config.py'
 
 # --- API для настроек ---
 @app.get('/api/settings')
 async def get_settings():
-    spec = importlib.util.spec_from_file_location('config_target', CONFIG_PATH)
-    config = importlib.util.module_from_spec(spec)
-    sys.modules['config_target'] = config
-    spec.loader.exec_module(config)
-    return {
-        'modelNames': getattr(config, 'MODEL_NAMES', []),
-        'webhookInterval': getattr(config, 'WEBHOOK_INTERVAL', 600),
-        'webhookEnabled': getattr(config, 'WEBHOOK_ENABLED', True),
-        'webhookUrl': getattr(config, 'WEBHOOK_URL', ''),
-        'loggerApiUrl': getattr(config, 'LOGGER_API_URL', '')
-    }
+    # Всегда грузим из GitHub
+    try:
+        resp = requests.get(CONFIG_GITHUB_URL, timeout=5)
+        if resp.status_code == 200:
+            code = resp.text
+            result = {}
+            for line in code.splitlines():
+                if line.strip().startswith('MODEL_NAMES'):
+                    result['modelNames'] = eval(line.split('=',1)[1].strip(), {}, {})
+                elif line.strip().startswith('WEBHOOK_INTERVAL'):
+                    result['webhookInterval'] = int(line.split('=',1)[1].split('#')[0].strip())
+                elif line.strip().startswith('WEBHOOK_ENABLED'):
+                    result['webhookEnabled'] = 'True' in line
+                elif line.strip().startswith('WEBHOOK_URL'):
+                    result['webhookUrl'] = line.split('=',1)[1].strip().strip('"\'')
+                elif line.strip().startswith('LOGGER_API_URL'):
+                    result['loggerApiUrl'] = line.split('=',1)[1].strip().strip('"\'')
+            return result
+        else:
+            return {'error': 'Не удалось загрузить config.py из GitHub'}
+    except Exception as e:
+        return {'error': f'Ошибка загрузки config.py из GitHub: {e}'}
 
 @app.post('/api/settings')
 async def save_settings(data: dict = Body(...)):
