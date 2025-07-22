@@ -126,9 +126,11 @@ async def get_summary():
     with lock:
         total_files = len(log_files)
         total_duration = sum(l.get('duration', 0) for l in log_files)
+        total_size = sum(l.get('size', 0) for l in log_files)
     return JSONResponse(content={
         "total_files": total_files,
-        "total_duration": total_duration
+        "total_duration": total_duration,
+        "total_size": total_size
     })
 
 @app.get('/', response_class=HTMLResponse)

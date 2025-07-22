@@ -3,7 +3,7 @@ let histChart;
 let logs = [];
 let allLogs = [];
 let currentPage = 1;
-const logsPerPage = 10;
+const logsPerPage = window.LOGS_PER_PAGE || 10;
 let filters = { filename: '', date: '' };
 
 const UI_CONST = {
@@ -50,7 +50,7 @@ async function fetchLogs() {
     const res = await fetch(url);
     const data = await res.json();
     logs = data;
-    renderLogsTable();
+    renderLogsTable(logs);
 }
 
 async function fetchSummary() {
@@ -59,6 +59,9 @@ async function fetchSummary() {
     if (!data.error) {
         document.getElementById('totalFiles').textContent = `${UI_CONST.TOTAL_FILES_LABEL}: ${data.total_files}`;
         document.getElementById('totalDuration').textContent = `${UI_CONST.TOTAL_DURATION_LABEL}: ${formatDuration(data.total_duration)}`;
+        if (data.total_size !== undefined) {
+            document.getElementById('totalSize').textContent = `Общий объем: ${formatFileSize(data.total_size)}`;
+        }
     }
 }
 
@@ -70,6 +73,15 @@ function formatDuration(seconds) {
     const h = Math.floor(m / 60);
     const mm = m % 60;
     return `${h} ${UI_CONST.DURATION_HOUR} ${mm} ${UI_CONST.DURATION_MIN} ${s} ${UI_CONST.DURATION_SEC}`;
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Б';
+    const k = 1024;
+    const dm = 2;
+    const sizes = window.SIZE_UNITS || ["Б", "КБ", "МБ", "ГБ", "ТБ"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 function showError(msg) {
@@ -91,32 +103,37 @@ function updateChart(data) {
     const labels = Object.keys(data).sort();
     const values = labels.map(k => data[k]);
     const ctx = document.getElementById('logChart').getContext('2d');
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: UI_CONST.CHART_LABEL_MINUTES,
-                data: values,
-                borderColor: '#36a2eb',
-                backgroundColor: 'rgba(54,162,235,0.1)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: true, position: 'top' }
+    if (!chart) {
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: UI_CONST.CHART_LABEL_MINUTES,
+                    data: values,
+                    borderColor: '#36a2eb',
+                    backgroundColor: 'rgba(54,162,235,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2
+                }]
             },
-            scales: {
-                x: { title: { display: true, text: UI_CONST.CHART_X_MINUTES } },
-                y: { title: { display: true, text: UI_CONST.CHART_Y_FILES }, beginAtZero: true }
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                },
+                scales: {
+                    x: { title: { display: true, text: UI_CONST.CHART_X_MINUTES } },
+                    y: { title: { display: true, text: UI_CONST.CHART_Y_FILES }, beginAtZero: true }
+                }
             }
-        }
-    });
+        });
+    } else {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.update();
+    }
 }
 
 function updateHistChart(data) {
@@ -124,30 +141,35 @@ function updateHistChart(data) {
     const labels = Object.keys(data).sort();
     const values = labels.map(k => data[k]);
     const ctx = document.getElementById('histChart').getContext('2d');
-    if (histChart) histChart.destroy();
-    histChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: UI_CONST.CHART_LABEL_DAYS,
-                data: values,
-                backgroundColor: 'rgba(255,184,108,0.7)',
-                borderColor: '#ffb86c',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: true, position: 'top' }
+    if (!histChart) {
+        histChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: UI_CONST.CHART_LABEL_DAYS,
+                    data: values,
+                    backgroundColor: 'rgba(255,184,108,0.7)',
+                    borderColor: '#ffb86c',
+                    borderWidth: 2
+                }]
             },
-            scales: {
-                x: { title: { display: true, text: UI_CONST.CHART_X_DAYS } },
-                y: { title: { display: true, text: UI_CONST.CHART_Y_FILES }, beginAtZero: true }
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                },
+                scales: {
+                    x: { title: { display: true, text: UI_CONST.CHART_X_DAYS } },
+                    y: { title: { display: true, text: UI_CONST.CHART_Y_FILES }, beginAtZero: true }
+                }
             }
-        }
-    });
+        });
+    } else {
+        histChart.data.labels = labels;
+        histChart.data.datasets[0].data = values;
+        histChart.update();
+    }
 }
 
 function renderLogsTable(logs) {
@@ -162,10 +184,10 @@ function renderLogsTable(logs) {
             <td>${log.received_at}</td>
             <td>${log.filename}</td>
             <td>${log.duration}</td>
-            <td>${log.size}</td>
+            <td>${formatFileSize(log.size)}</td>
             <td>
                 <button class="open-log-btn" onclick="openLogModal('${log.filename.replace(/'/g, '\'')}', '${log.received_at.replace(/'/g, '\'')}', '${log.file_id || ''}')">Открыть</button>
-                <button class="open-log-btn" style="background:#ff5555;" onclick="deleteLog('${log.file_id || ''}')">Удалить</button>
+                <button class="open-log-btn delete-log-btn" onclick="deleteLog('${log.file_id || ''}')">Удалить</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -174,16 +196,30 @@ function renderLogsTable(logs) {
 }
 
 function openLogModal(filename, received_at, file_id) {
+    const modal = document.getElementById('logModal');
+    modal.classList.add('loading-modal');
     fetch(`/log_text?filename=${encodeURIComponent(filename)}&received_at=${encodeURIComponent(received_at)}`)
         .then(res => res.json())
         .then(data => {
             let gdocLink = file_id ? `<a href='https://drive.google.com/file/d/${file_id}/view' target='_blank' style='color:#8be9fd;'>Открыть в Google Docs</a><br><br>` : '';
             document.getElementById('logText').innerHTML =
                 gdocLink +
-                `<div class='log-text-block'><pre style="white-space:pre-wrap;margin:0;">${data.text || 'Нет данных'}</pre></div>` +
-                `<div style='margin-top:18px;text-align:right;'><button class='open-log-btn' style='background:#ff5555;' onclick='deleteLogModal("${file_id}")'>Удалить</button></div>`;
-            document.getElementById('logModal').style.display = 'flex';
+                `<div class='log-text-block'><pre style="white-space:pre-wrap;word-break:break-all;margin:0;max-height:600px;overflow:auto;">${data.text ? escapeHtml(data.text) : 'Нет данных'}</pre></div>` +
+                `<div style='margin-top:18px;text-align:right;'><button class='open-log-btn delete-log-btn' onclick='deleteLogModal("${file_id}")'>Удалить</button></div>`;
+            modal.classList.remove('loading-modal');
+            modal.style.display = 'flex';
         });
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
 function closeModal() {
@@ -200,7 +236,7 @@ function renderPagination(totalLogs) {
         btn.className = 'open-log-btn' + (i === currentPage ? ' active' : '');
         btn.onclick = () => {
             currentPage = i;
-            renderLogsTable(allLogs);
+            renderLogsTable(logs);
         };
         container.appendChild(btn);
     }
@@ -211,8 +247,9 @@ function loadLogs() {
         .then(res => res.json())
         .then(data => {
             allLogs = data;
+            logs = data;
             currentPage = 1;
-            renderLogsTable(allLogs);
+            renderLogsTable(logs);
         });
 }
 
@@ -235,7 +272,7 @@ function resetFilters() {
     document.getElementById('filenameFilter').value = '';
     document.getElementById('dateFilter').value = '';
     filters = { filename: '', date: '' };
-    fetchLogs();
+    loadLogs();
 }
 
 // --- Разделяем обновление графиков и таблицы ---
@@ -267,6 +304,8 @@ async function fullSyncFromServer() {
 setInterval(fullSyncFromServer, 5 * 60 * 1000); // раз в 5 минут
 
 async function deleteLog(file_id) {
+    const btn = document.querySelector(`button[onclick*="deleteLog('${file_id}'"]`);
+    if (btn) btn.classList.add('loading-btn');
     const url = `/log?file_id=${encodeURIComponent(file_id)}`;
     const res = await fetch(url, { method: 'DELETE' });
     const data = await res.json();
@@ -277,15 +316,21 @@ async function deleteLog(file_id) {
     } else {
         alert(data.error || UI_CONST.DELETE_ERROR_TEXT);
     }
+    if (btn) setTimeout(() => btn.classList.remove('loading-btn'), 400);
 }
 
 function deleteLogModal(file_id) {
     if (!file_id) return alert('Нет file_id для удаления!');
-    if (!confirm('Удалить лог?')) return;
+    // Анимация удаления
+    const modal = document.getElementById('logModal');
+    modal.classList.add('loading-modal');
     fetch(`/log?file_id=${encodeURIComponent(file_id)}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(() => {
-            closeModal();
-            loadLogs();
+            setTimeout(() => {
+                modal.classList.remove('loading-modal');
+                closeModal();
+                loadLogs();
+            }, 400); // небольшая задержка для анимации
         });
 }

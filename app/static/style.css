@@ -104,11 +104,20 @@ h1 {
     transform: scale(0.98);
 }
 .delete-log-btn {
-    background: linear-gradient(90deg, #ff6c6c 0%, #ffb86c 100%) !important;
-    color: #232526 !important;
+    background: linear-gradient(90deg, #ff5555 0%, #ff0000 100%) !important;
+    color: #fff !important;
+    border: none;
 }
 .delete-log-btn:hover {
-    background: linear-gradient(90deg, #ffb86c 0%, #ff6c6c 100%) !important;
+    background: linear-gradient(90deg, #ff0000 0%, #ff5555 100%) !important;
+}
+.reset-btn {
+    background: linear-gradient(90deg, #ff5555 0%, #ff0000 100%) !important;
+    color: #fff !important;
+    border: none;
+}
+.reset-btn:hover {
+    background: linear-gradient(90deg, #ff0000 0%, #ff5555 100%) !important;
 }
 .charts {
     display: flex;
@@ -340,4 +349,36 @@ canvas {
     background: #8be9fd;
     color: #232526;
     font-weight: bold;
+}
+.loading-modal::before {
+    content: '';
+    position: fixed;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: rgba(25,23,36,0.35);
+    z-index: 2000;
+    pointer-events: all;
+}
+.loading-modal .modal-content {
+    filter: blur(1.5px) grayscale(0.2);
+    opacity: 0.7;
+}
+.loading-btn {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+.loading-btn::after {
+    content: '';
+    position: absolute;
+    right: 10px; top: 50%;
+    width: 18px; height: 18px;
+    margin-top: -9px;
+    border: 2.5px solid #ff5555;
+    border-top: 2.5px solid transparent;
+    border-radius: 50%;
+    animation: spinBtn 0.7s linear infinite;
+}
+@keyframes spinBtn {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

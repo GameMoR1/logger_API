@@ -12,12 +12,13 @@
         <div class="summary-block">
             <span id="totalFiles">Всего файлов: 0</span>
             <span id="totalDuration">Общее время: 0 сек</span>
+            <span id="totalSize">Общий объем: 0 Б</span>
         </div>
         <div class="filters">
             <input type="text" id="filenameFilter" placeholder="Фильтр по имени файла">
             <input type="date" id="dateFilter">
             <button onclick="applyFilters()">Фильтровать</button>
-            <button onclick="resetFilters()">Сбросить</button>
+            <button onclick="resetFilters()" class="open-log-btn reset-btn">Сбросить</button>
         </div>
         <div class="charts">
             <canvas id="logChart" width="800" height="300"></canvas>
@@ -49,6 +50,7 @@
             <button class="open-log-btn" onclick="window.location.href='/static/settings.html'" style="float:right;">Настроить сервис</button>
         </div>
     </div>
+    <script src="/static/constants.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>

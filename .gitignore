@@ -71,3 +71,13 @@ token.pickle
 # Логи и дампы
 *.log
 *.dump
+
+# Удаляемые/лишние файлы
+*.bak
+*.pickle
+*.pkl
+*.tmp
+*.swp
+*.swo
+client_secret.json
+*.pickle
