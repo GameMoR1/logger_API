@@ -5,6 +5,7 @@ let allLogs = [];
 let currentPage = 1;
 const logsPerPage = window.LOGS_PER_PAGE || 10;
 let filters = { filename: '', date: '' };
+let sortState = { column: null, asc: true };
 
 const UI_CONST = {
     UPDATE_INTERVAL_MS: 60000, // 1 минута
@@ -175,15 +176,44 @@ function updateHistChart(data) {
 function renderLogsTable(logs) {
     const tbody = document.querySelector('#logsTable tbody');
     tbody.innerHTML = '';
+    let sortedLogs = [...logs];
+    if (sortState.column) {
+        sortedLogs.sort((a, b) => {
+            let valA, valB;
+            switch (sortState.column) {
+                case 'received_at':
+                    valA = new Date(a.received_at).getTime();
+                    valB = new Date(b.received_at).getTime();
+                    break;
+                case 'filename':
+                    valA = a.filename.toLowerCase();
+                    valB = b.filename.toLowerCase();
+                    break;
+                case 'duration':
+                    valA = Number(a.duration);
+                    valB = Number(b.duration);
+                    break;
+                case 'size':
+                    valA = Number(a.size);
+                    valB = Number(b.size);
+                    break;
+                default:
+                    return 0;
+            }
+            if (valA < valB) return sortState.asc ? -1 : 1;
+            if (valA > valB) return sortState.asc ? 1 : -1;
+            return 0;
+        });
+    }
     const start = (currentPage - 1) * logsPerPage;
     const end = start + logsPerPage;
-    const pageLogs = logs.slice(start, end);
+    const pageLogs = sortedLogs.slice(start, end);
     for (const log of pageLogs) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${log.received_at}</td>
+            <td>${formatDateTime(log.received_at)}</td>
             <td>${log.filename}</td>
-            <td>${log.duration}</td>
+            <td>${formatDuration(log.duration)}</td>
             <td>${formatFileSize(log.size)}</td>
             <td>
                 <button class="open-log-btn" onclick="openLogModal('${log.filename.replace(/'/g, '\'')}', '${log.received_at.replace(/'/g, '\'')}', '${log.file_id || ''}')">Открыть</button>
@@ -226,19 +256,64 @@ function closeModal() {
     document.getElementById('logModal').style.display = 'none';
 }
 
+// Форматирование даты/времени для таблицы
+function formatDateTime(dt) {
+    // dt может быть ISO-строкой или timestamp
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return dt;
+    // Формат: ДД.ММ.ГГГГ HH:MM:SS
+    const pad = n => n.toString().padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 function renderPagination(totalLogs) {
     let pages = Math.ceil(totalLogs / logsPerPage);
     const container = document.getElementById('paginationContainer');
     container.innerHTML = '';
-    for (let i = 1; i <= pages; i++) {
+    if (pages <= 1) return;
+
+    // Helper to create a page button
+    function createPageBtn(i, text = null) {
         const btn = document.createElement('button');
-        btn.textContent = i;
+        btn.textContent = text || i;
         btn.className = 'open-log-btn' + (i === currentPage ? ' active' : '');
         btn.onclick = () => {
-            currentPage = i;
-            renderLogsTable(logs);
+            if (i !== currentPage && typeof i === 'number') {
+                currentPage = i;
+                renderLogsTable(logs);
+            }
         };
         container.appendChild(btn);
+    }
+
+    // Параметры отображения
+    const maxVisible = 5; // сколько страниц максимум показывать вокруг текущей
+    const showLeft = Math.max(2, currentPage - 2);
+    const showRight = Math.min(pages - 1, currentPage + 2);
+
+    // Первая страница
+    createPageBtn(1);
+
+    // Троеточие слева
+    if (showLeft > 2) {
+        createPageBtn(null, '...');
+    }
+
+    // Страницы вокруг текущей
+    for (let i = showLeft; i <= showRight; i++) {
+        if (i > 1 && i < pages) {
+            createPageBtn(i);
+        }
+    }
+
+    // Троеточие справа
+    if (showRight < pages - 1) {
+        createPageBtn(null, '...');
+    }
+
+    // Последняя страница
+    if (pages > 1) {
+        createPageBtn(pages);
     }
 }
 
@@ -289,6 +364,24 @@ async function refreshTableAndSummary() {
 }
 
 window.onload = async function() {
+    // Добавляем обработчики сортировки на заголовки таблицы
+    const ths = document.querySelectorAll('#logsTable thead th');
+    const columns = ['received_at', 'filename', 'duration', 'size'];
+    ths.forEach((th, idx) => {
+        if (idx < 4) {
+            th.style.cursor = 'pointer';
+            th.onclick = () => {
+                if (sortState.column === columns[idx]) {
+                    sortState.asc = !sortState.asc;
+                } else {
+                    sortState.column = columns[idx];
+                    sortState.asc = true;
+                }
+                currentPage = 1;
+                renderLogsTable(logs);
+            };
+        }
+    });
     loadLogs();
     await updateCharts();
     await refreshTableAndSummary();
