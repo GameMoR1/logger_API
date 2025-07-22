@@ -81,3 +81,6 @@ token.pickle
 *.swo
 client_secret.json
 *.pickle
+
+# Токен github
+.github_token
