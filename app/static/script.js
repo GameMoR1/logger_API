@@ -3,6 +3,25 @@ let histChart;
 let logs = [];
 let filters = { filename: '', date: '' };
 
+const UI_CONST = {
+    UPDATE_INTERVAL_MS: 60000, // 1 минута
+    NO_DATA_TEXT: 'Нет данных',
+    DELETE_CONFIRM_TEXT: 'Удалить лог?',
+    DELETE_ERROR_TEXT: 'Ошибка удаления',
+    TOTAL_FILES_LABEL: 'Всего файлов',
+    TOTAL_DURATION_LABEL: 'Общее время',
+    DURATION_SEC: 'сек',
+    DURATION_MIN: 'мин',
+    DURATION_HOUR: 'ч',
+    OPEN_BTN_LABEL: 'Открыть',
+    DELETE_BTN_LABEL: 'Удалить',
+    CHART_LABEL_MINUTES: 'Количество файлов (по минутам)',
+    CHART_LABEL_DAYS: 'Файлов за день',
+    CHART_X_MINUTES: 'Время (минуты)',
+    CHART_X_DAYS: 'Дата',
+    CHART_Y_FILES: 'Файлов',
+};
+
 async function fetchStats() {
     const res = await fetch('/stats');
     const data = await res.json();
@@ -35,19 +54,19 @@ async function fetchSummary() {
     const res = await fetch('/summary');
     const data = await res.json();
     if (!data.error) {
-        document.getElementById('totalFiles').textContent = `Всего файлов: ${data.total_files}`;
-        document.getElementById('totalDuration').textContent = `Общее время: ${formatDuration(data.total_duration)}`;
+        document.getElementById('totalFiles').textContent = `${UI_CONST.TOTAL_FILES_LABEL}: ${data.total_files}`;
+        document.getElementById('totalDuration').textContent = `${UI_CONST.TOTAL_DURATION_LABEL}: ${formatDuration(data.total_duration)}`;
     }
 }
 
 function formatDuration(seconds) {
-    if (seconds < 60) return `${seconds} сек`;
+    if (seconds < 60) return `${seconds} ${UI_CONST.DURATION_SEC}`;
     const m = Math.floor(seconds / 60);
     const s = Math.round(seconds % 60);
-    if (m < 60) return `${m} мин ${s} сек`;
+    if (m < 60) return `${m} ${UI_CONST.DURATION_MIN} ${s} ${UI_CONST.DURATION_SEC}`;
     const h = Math.floor(m / 60);
     const mm = m % 60;
-    return `${h} ч ${mm} мин ${s} сек`;
+    return `${h} ${UI_CONST.DURATION_HOUR} ${mm} ${UI_CONST.DURATION_MIN} ${s} ${UI_CONST.DURATION_SEC}`;
 }
 
 function showError(msg) {
@@ -75,7 +94,7 @@ function updateChart(data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Количество файлов (по минутам)',
+                label: UI_CONST.CHART_LABEL_MINUTES,
                 data: values,
                 borderColor: '#36a2eb',
                 backgroundColor: 'rgba(54,162,235,0.1)',
@@ -90,8 +109,8 @@ function updateChart(data) {
                 legend: { display: true, position: 'top' }
             },
             scales: {
-                x: { title: { display: true, text: 'Время (минуты)' } },
-                y: { title: { display: true, text: 'Файлов' }, beginAtZero: true }
+                x: { title: { display: true, text: UI_CONST.CHART_X_MINUTES } },
+                y: { title: { display: true, text: UI_CONST.CHART_Y_FILES }, beginAtZero: true }
             }
         }
     });
@@ -108,7 +127,7 @@ function updateHistChart(data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Файлов за день',
+                label: UI_CONST.CHART_LABEL_DAYS,
                 data: values,
                 backgroundColor: 'rgba(255,184,108,0.7)',
                 borderColor: '#ffb86c',
@@ -121,8 +140,8 @@ function updateHistChart(data) {
                 legend: { display: true, position: 'top' }
             },
             scales: {
-                x: { title: { display: true, text: 'Дата' } },
-                y: { title: { display: true, text: 'Файлов' }, beginAtZero: true }
+                x: { title: { display: true, text: UI_CONST.CHART_X_DAYS } },
+                y: { title: { display: true, text: UI_CONST.CHART_Y_FILES }, beginAtZero: true }
             }
         }
     });
@@ -132,7 +151,7 @@ function renderLogsTable() {
     const tbody = document.querySelector('#logsTable tbody');
     tbody.innerHTML = '';
     if (!logs.length) {
-        tbody.innerHTML = '<tr><td colspan="5">Нет данных</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5">${UI_CONST.NO_DATA_TEXT}</td></tr>`;
         return;
     }
     for (const log of logs) {
@@ -142,7 +161,10 @@ function renderLogsTable() {
             <td>${log.filename}</td>
             <td>${log.duration}</td>
             <td>${log.size}</td>
-            <td><button onclick="openLog('${log.filename}','${log.received_at}')">Открыть</button></td>
+            <td>
+                <button class="open-log-btn" onclick="openLog('${log.filename}','${log.received_at}')">${UI_CONST.OPEN_BTN_LABEL}</button>
+                <button class="open-log-btn delete-log-btn" onclick="deleteLog('${log.file_id}')">${UI_CONST.DELETE_BTN_LABEL}</button>
+            </td>
         `;
         tbody.appendChild(tr);
     }
@@ -151,7 +173,7 @@ function renderLogsTable() {
 async function openLog(filename, received_at) {
     const res = await fetch(`/log_text?filename=${encodeURIComponent(filename)}&received_at=${encodeURIComponent(received_at)}`);
     const data = await res.json();
-    document.getElementById('logText').textContent = data.text || data.error || 'Нет данных';
+    document.getElementById('logText').textContent = data.text || data.error || UI_CONST.NO_DATA_TEXT;
     document.getElementById('logModal').style.display = 'flex';
 }
 function closeModal() {
@@ -170,14 +192,42 @@ function resetFilters() {
     fetchLogs();
 }
 
-async function refresh() {
+// --- Разделяем обновление графиков и таблицы ---
+async function updateCharts() {
     const stats = await fetchStats();
     updateChart(stats);
     const hist = await fetchHistogram();
     updateHistChart(hist);
+}
+
+async function refreshTableAndSummary() {
     await fetchLogs();
     await fetchSummary();
 }
 
-setInterval(refresh, 2000);
-window.onload = refresh;
+window.onload = async function() {
+    await updateCharts();
+    await refreshTableAndSummary();
+    setInterval(updateCharts, UI_CONST.UPDATE_INTERVAL_MS); // графики раз в минуту
+    setInterval(refreshTableAndSummary, 1000); // таблица и summary раз в секунду
+};
+
+// --- Периодическая полная синхронизация с Google Drive ---
+async function fullSyncFromServer() {
+    await fetchLogs();
+    await fetchSummary();
+}
+setInterval(fullSyncFromServer, 5 * 60 * 1000); // раз в 5 минут
+
+async function deleteLog(file_id) {
+    const url = `/log?file_id=${encodeURIComponent(file_id)}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.status === 'deleted') {
+        logs = logs.filter(l => l.file_id !== file_id);
+        renderLogsTable();
+        await fetchSummary();
+    } else {
+        alert(data.error || UI_CONST.DELETE_ERROR_TEXT);
+    }
+}

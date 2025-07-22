@@ -51,3 +51,14 @@ tmp/
 # Test output
 htmlcov/
 coverage.xml
+
+# Google Drive OAuth2
+client_secret.json
+*.pickle
+token.pickle
+# Временные файлы логов
+/tmp/
+*.tmp
+# Логи и дампы
+*.log
+*.dump

@@ -50,7 +50,7 @@ h1 {
     justify-content: center;
     align-items: center;
 }
-.filters input, .filters button {
+.filters input, .filters button, .open-log-btn {
     padding: 8px 14px;
     border-radius: 6px;
     border: 1px solid #35374b;
@@ -58,17 +58,57 @@ h1 {
     outline: none;
     background: #232526;
     color: #ececec;
+    margin: 0 2px;
 }
-.filters button {
+.filters button, .open-log-btn {
     background: linear-gradient(90deg, #8be9fd 0%, #ffb86c 100%);
     border: none;
     color: #232526;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 1em;
+    outline: none;
+    margin: 0 2px;
+    box-shadow: 0 2px 12px #0003;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    min-width: 90px;
 }
-.filters button:hover {
+.open-log-btn {
+    background: linear-gradient(90deg, #8be9fd 0%, #ffb86c 100%);
+    border: none;
+    color: #232526;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 1em;
+    outline: none;
+    margin: 0 2px;
+    box-shadow: 0 2px 12px #0003;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    min-width: 90px;
+}
+.open-log-btn:hover {
     background: linear-gradient(90deg, #ffb86c 0%, #8be9fd 100%);
+    box-shadow: 0 4px 18px #0005;
+    transform: translateY(-2px) scale(1.04);
+}
+.open-log-btn:active {
+    filter: brightness(0.95);
+    transform: scale(0.98);
+}
+.delete-log-btn {
+    background: linear-gradient(90deg, #ff6c6c 0%, #ffb86c 100%) !important;
+    color: #232526 !important;
+}
+.delete-log-btn:hover {
+    background: linear-gradient(90deg, #ffb86c 0%, #ff6c6c 100%) !important;
 }
 .charts {
     display: flex;
