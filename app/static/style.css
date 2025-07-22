@@ -267,6 +267,78 @@ canvas {
         padding: 18px 6vw 18px 6vw;
     }
 }
+
+@media (max-width: 600px) {
+    .container {
+        max-width: 100vw;
+        margin: 0;
+        border-radius: 0;
+        padding: 10px 2vw 10px 2vw;
+        box-shadow: none;
+    }
+    .summary-block {
+        flex-direction: column;
+        gap: 8px;
+        font-size: 1em;
+        padding: 8px 0;
+    }
+    .filters {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    .filters input, .filters button, .open-log-btn {
+        font-size: 0.98em;
+        padding: 8px 8px;
+        min-width: 0;
+    }
+    h1 {
+        font-size: 1.3em;
+    }
+    .charts {
+        gap: 12px;
+    }
+    .charts canvas {
+        width: 98vw !important;
+        min-width: 320px;
+        max-width: 100vw;
+        height: 180px !important;
+    }
+    #logsTableContainer {
+        padding: 8px 2px 8px 2px;
+    }
+    #logsTable {
+        font-size: 0.95em;
+        min-width: 500px;
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    #logsTable th, #logsTable td {
+        padding: 6px 6px;
+    }
+    .runpod-status-block {
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 6px;
+        font-size: 1em;
+    }
+    .settings-block {
+        padding: 12px 6px 10px 6px;
+        max-width: 100vw;
+    }
+    .styled-checkbox {
+        font-size: 0.98em;
+    }
+    .modal-content {
+        padding: 10px 2vw 10px 2vw;
+    }
+    #paginationContainer button.open-log-btn {
+        font-size: 0.95em;
+        padding: 6px 8px;
+    }
+}
 ::-webkit-scrollbar {
     width: 10px;
     background: #232526;
