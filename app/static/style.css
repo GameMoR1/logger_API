@@ -149,43 +149,61 @@ canvas {
     background: #282a36;
 }
 .modal {
+    display: none;
     position: fixed;
     z-index: 1000;
-    left: 0; top: 0; width: 100vw; height: 100vh;
-    background: rgba(0,0,0,0.7);
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
+    background: rgba(25, 23, 36, 0.85);
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 }
 .modal-content {
     background: #232526;
-    padding: 24px 32px;
-    border-radius: 10px;
-    min-width: 350px;
+    margin: auto;
+    padding: 32px 28px 24px 28px;
+    border-radius: 14px;
     max-width: 700px;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 32px #000a;
+    min-width: 320px;
+    box-shadow: 0 8px 40px #000a;
     position: relative;
+    text-align: left;
     color: #ececec;
+    word-break: break-word;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
-.close {
+.modal .close {
     position: absolute;
     right: 18px;
     top: 12px;
     font-size: 2em;
-    color: #888;
+    color: #8be9fd;
     cursor: pointer;
 }
-pre#logText {
-    text-align: left;
-    background: #191724;
-    padding: 16px;
+.log-text-block {
+    background: #111117;
     border-radius: 8px;
-    font-size: 1em;
-    white-space: pre-wrap;
-    word-break: break-all;
+    padding: 18px 16px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Fira Mono', 'Consolas', monospace;
+    font-size: 1.08em;
     color: #ececec;
+}
+@media (max-width: 800px) {
+    .modal-content {
+        max-width: 98vw;
+        min-width: 0;
+        padding: 18px 6vw 18px 6vw;
+    }
 }
 ::-webkit-scrollbar {
     width: 10px;
@@ -197,4 +215,129 @@ pre#logText {
 }
 ::-webkit-scrollbar-thumb:hover {
     background: #44465a;
+}
+.styled-checkbox {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-left: 28px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    user-select: none;
+    color: #ececec;
+    min-height: 24px;
+}
+.styled-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+.styled-checkbox .checkmark {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    height: 20px;
+    width: 20px;
+    background-color: #232526;
+    border: 2px solid #8be9fd;
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+.styled-checkbox input[type="checkbox"]:checked ~ .checkmark {
+    background-color: #8be9fd;
+    border-color: #8be9fd;
+}
+.styled-checkbox .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+.styled-checkbox input[type="checkbox"]:checked ~ .checkmark:after {
+    display: block;
+}
+.styled-checkbox .checkmark:after {
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 12px;
+    border: solid #232526;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+}
+.styled-checkbox input[type="checkbox"] + .checkmark {
+    display: inline-block;
+}
+.settings-block {
+    background: #232526;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px #0004;
+    padding: 24px 24px 18px 24px;
+    margin-bottom: 24px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
+.settings-block h2 {
+    margin-top: 0;
+    margin-bottom: 14px;
+    font-size: 1.15em;
+    color: #8be9fd;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+.settings-block label {
+    display: block;
+    margin-bottom: 12px;
+}
+.settings-block input[type="text"],
+.settings-block input[type="number"] {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #35374b;
+    font-size: 1em;
+    outline: none;
+    background: #232526;
+    color: #ececec;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+}
+#modelCheckboxes {
+    margin-bottom: 0;
+}
+.spinner {
+    border: 4px solid #232526;
+    border-top: 4px solid #8be9fd;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+#paginationContainer {
+    margin-top: 12px;
+}
+#paginationContainer button.open-log-btn {
+    margin: 0 4px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid #35374b;
+    background: #232526;
+    color: #8be9fd;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+#paginationContainer button.open-log-btn.active {
+    background: #8be9fd;
+    color: #232526;
+    font-weight: bold;
 }

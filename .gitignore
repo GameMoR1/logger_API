@@ -52,6 +52,15 @@ tmp/
 htmlcov/
 coverage.xml
 
+# Google API
+client_secret.json
+client_secret_*.json
+token.pickle
+*.token.pickle
+
+# Индекс логов (Google Drive, не локально, но на всякий случай)
+logs_index.json
+
 # Google Drive OAuth2
 client_secret.json
 *.pickle

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Body, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -7,6 +7,9 @@ from .gdrive_logger import GDriveLogger
 from .constants import *
 import threading
 import os
+import importlib.util
+import sys
+import subprocess
 
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='app/static'), name='static')
@@ -51,13 +54,24 @@ async def log_file(data: LogData):
         log_entry["size"] = int(log_entry["size"])
     except Exception:
         log_entry["size"] = 0
+    # Сохраняем лог в Google Drive и получаем file_id
+    file_id = None
+    def log_and_get_id():
+        nonlocal file_id
+        file_id = logger.log_and_return_id(log_entry)
+    t = threading.Thread(target=log_and_get_id)
+    t.start()
+    t.join()
+    log_entry['file_id'] = file_id
+    # Добавляем в индекс
+    logger.add_log_to_index(log_entry)
     with lock:
         log_stats.append({
             'received_at': log_entry['received_at'],
-            'filename': log_entry['filename']
+            'filename': log_entry['filename'],
+            'file_id': file_id
         })
-        log_files.append(log_entry)  # Сохраняем для UI
-    threading.Thread(target=logger.log, args=(log_entry,)).start()
+        log_files.append(log_entry)
     return {'status': 'ok'}
 
 @app.get('/stats')
@@ -133,41 +147,16 @@ def initialize_state_from_gdrive():
     try:
         if logger is None:
             logger = GDriveLogger()
-        all_logs = logger.list_all_logs()
+        # Проверка и синхронизация индекс-файла
+        logger.ensure_index_consistency()
+        # Загружаем только индекс-файл
+        index = logger.load_index()
         files = []
         stats = []
-        import tempfile
-        for log_meta in all_logs:
-            file_id = log_meta['id']
-            name = log_meta['name']
-            # Скачиваем во временный файл
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as tmp:
-                tmp_path = tmp.name
-            try:
-                data = None
-                logger.download_log_file(file_id, tmp_path)
-                data = logger.parse_log_file(tmp_path)
-                # Приведение типов для числовых полей
-                for key in ["duration", "queue_time", "process_time"]:
-                    try:
-                        data[key] = float(data[key])
-                    except Exception:
-                        data[key] = 0.0
-                try:
-                    data["size"] = int(data["size"])
-                except Exception:
-                    data["size"] = 0
-                data['file_id'] = file_id  # сохраняем id файла
-                files.append(data)
-                if 'received_at' in data and 'filename' in data:
-                    stats.append({'received_at': data['received_at'], 'filename': data['filename'], 'file_id': file_id})
-            except Exception as e:
-                print(f"[Google Drive ERROR]: Не удалось скачать/распарсить {name}: {e}")
-            finally:
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
+        for entry in index:
+            files.append(entry)
+            if 'received_at' in entry and 'filename' in entry:
+                stats.append({'received_at': entry['received_at'], 'filename': entry['filename'], 'file_id': entry.get('file_id')})
         with lock:
             log_files = files
             log_stats = stats
@@ -179,7 +168,6 @@ if CREDENTIALS_EXISTS:
     threading.Thread(target=initialize_state_from_gdrive, daemon=True).start()
 
 # --- Endpoint для удаления лога ---
-from fastapi import Query
 @app.delete('/log')
 async def delete_log(file_id: str = Query(...)):
     global logger
@@ -192,8 +180,57 @@ async def delete_log(file_id: str = Query(...)):
             return JSONResponse(content={"error": f"Ошибка инициализации GDriveLogger: {e}"}, status_code=500)
     # Удаляем с Google Drive
     logger.delete_log_file(file_id)
+    # Удаляем из индекс-файла
+    logger.remove_log_from_index(file_id)
     # Удаляем из локального состояния
     with lock:
         log_files[:] = [l for l in log_files if l.get('file_id') != file_id]
         log_stats[:] = [s for s in log_stats if s.get('file_id') != file_id]
     return {"status": "deleted"}
+
+CONFIG_PATH = '../whisper_API_que/core/config.py'  # путь к файлу в другом репозитории
+
+# --- API для настроек ---
+@app.get('/api/settings')
+async def get_settings():
+    spec = importlib.util.spec_from_file_location('config_target', CONFIG_PATH)
+    config = importlib.util.module_from_spec(spec)
+    sys.modules['config_target'] = config
+    spec.loader.exec_module(config)
+    return {
+        'modelNames': getattr(config, 'MODEL_NAMES', []),
+        'webhookInterval': getattr(config, 'WEBHOOK_INTERVAL', 600),
+        'webhookEnabled': getattr(config, 'WEBHOOK_ENABLED', True),
+        'webhookUrl': getattr(config, 'WEBHOOK_URL', ''),
+        'loggerApiUrl': getattr(config, 'LOGGER_API_URL', '')
+    }
+
+@app.post('/api/settings')
+async def save_settings(data: dict = Body(...)):
+    text = f'''# Все основные константы для настройки сервиса\n\nMODEL_NAMES = {repr(data.get('modelNames', []))}\n\nWEBHOOK_INTERVAL = {int(data.get('webhookInterval', 600))}  # 10 минут\n\nWEBHOOK_ENABLED = {bool(data.get('webhookEnabled', True))}\n\nWEBHOOK_URL = {repr(data.get('webhookUrl', ''))}\n\nLOGGER_API_URL = {repr(data.get('loggerApiUrl', ''))}\n'''
+    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+        f.write(text)
+    try:
+        subprocess.run(['git', '-C', '../whisper_API_que', 'add', 'core/config.py'], check=True)
+        subprocess.run(['git', '-C', '../whisper_API_que', 'commit', '-m', 'Update config.py via web UI'], check=True)
+        subprocess.run(['git', '-C', '../whisper_API_que', 'push'], check=True)
+    except Exception as e:
+        return JSONResponse(content={'error': f'Ошибка git: {e}'}, status_code=500)
+    return {'status': 'ok'}
+
+@app.post('/api/settings/rollback')
+async def rollback_settings():
+    try:
+        # Откатить последний коммит только для config.py
+        subprocess.run(['git', '-C', '../whisper_API_que', 'checkout', 'HEAD~1', '--', 'core/config.py'], check=True)
+        subprocess.run(['git', '-C', '../whisper_API_que', 'commit', '-am', 'Rollback config.py via web UI'], check=True)
+        subprocess.run(['git', '-C', '../whisper_API_que', 'push'], check=True)
+    except Exception as e:
+        return JSONResponse(content={'error': f'Ошибка отката: {e}'}, status_code=500)
+    return {'status': 'ok'}
+
+@app.get('/settings', response_class=HTMLResponse)
+async def settings_page():
+    with open('app/static/settings.html', encoding='utf-8') as f:
+        html = f.read()
+    return HTMLResponse(html)

@@ -1,7 +1,7 @@
 import urllib.request
 import json
 
-url = "http://localhost:7995/log"
+url = "http://localhost:7998/log"
 data = {
     "filename": "testfile.txt",
     "duration": 41.5,

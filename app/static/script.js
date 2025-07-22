@@ -1,6 +1,9 @@
 let chart;
 let histChart;
 let logs = [];
+let allLogs = [];
+let currentPage = 1;
+const logsPerPage = 10;
 let filters = { filename: '', date: '' };
 
 const UI_CONST = {
@@ -147,14 +150,13 @@ function updateHistChart(data) {
     });
 }
 
-function renderLogsTable() {
+function renderLogsTable(logs) {
     const tbody = document.querySelector('#logsTable tbody');
     tbody.innerHTML = '';
-    if (!logs.length) {
-        tbody.innerHTML = `<tr><td colspan="5">${UI_CONST.NO_DATA_TEXT}</td></tr>`;
-        return;
-    }
-    for (const log of logs) {
+    const start = (currentPage - 1) * logsPerPage;
+    const end = start + logsPerPage;
+    const pageLogs = logs.slice(start, end);
+    for (const log of pageLogs) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${log.received_at}</td>
@@ -162,12 +164,56 @@ function renderLogsTable() {
             <td>${log.duration}</td>
             <td>${log.size}</td>
             <td>
-                <button class="open-log-btn" onclick="openLog('${log.filename}','${log.received_at}')">${UI_CONST.OPEN_BTN_LABEL}</button>
-                <button class="open-log-btn delete-log-btn" onclick="deleteLog('${log.file_id}')">${UI_CONST.DELETE_BTN_LABEL}</button>
+                <button class="open-log-btn" onclick="openLogModal('${log.filename.replace(/'/g, '\'')}', '${log.received_at.replace(/'/g, '\'')}', '${log.file_id || ''}')">Открыть</button>
+                <button class="open-log-btn" style="background:#ff5555;" onclick="deleteLog('${log.file_id || ''}')">Удалить</button>
             </td>
         `;
         tbody.appendChild(tr);
     }
+    renderPagination(logs.length);
+}
+
+function openLogModal(filename, received_at, file_id) {
+    fetch(`/log_text?filename=${encodeURIComponent(filename)}&received_at=${encodeURIComponent(received_at)}`)
+        .then(res => res.json())
+        .then(data => {
+            let gdocLink = file_id ? `<a href='https://drive.google.com/file/d/${file_id}/view' target='_blank' style='color:#8be9fd;'>Открыть в Google Docs</a><br><br>` : '';
+            document.getElementById('logText').innerHTML =
+                gdocLink +
+                `<div class='log-text-block'><pre style="white-space:pre-wrap;margin:0;">${data.text || 'Нет данных'}</pre></div>` +
+                `<div style='margin-top:18px;text-align:right;'><button class='open-log-btn' style='background:#ff5555;' onclick='deleteLogModal("${file_id}")'>Удалить</button></div>`;
+            document.getElementById('logModal').style.display = 'flex';
+        });
+}
+
+function closeModal() {
+    document.getElementById('logModal').style.display = 'none';
+}
+
+function renderPagination(totalLogs) {
+    let pages = Math.ceil(totalLogs / logsPerPage);
+    const container = document.getElementById('paginationContainer');
+    container.innerHTML = '';
+    for (let i = 1; i <= pages; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.className = 'open-log-btn' + (i === currentPage ? ' active' : '');
+        btn.onclick = () => {
+            currentPage = i;
+            renderLogsTable(allLogs);
+        };
+        container.appendChild(btn);
+    }
+}
+
+function loadLogs() {
+    fetch('/logs')
+        .then(res => res.json())
+        .then(data => {
+            allLogs = data;
+            currentPage = 1;
+            renderLogsTable(allLogs);
+        });
 }
 
 async function openLog(filename, received_at) {
@@ -206,6 +252,7 @@ async function refreshTableAndSummary() {
 }
 
 window.onload = async function() {
+    loadLogs();
     await updateCharts();
     await refreshTableAndSummary();
     setInterval(updateCharts, UI_CONST.UPDATE_INTERVAL_MS); // графики раз в минуту
@@ -230,4 +277,15 @@ async function deleteLog(file_id) {
     } else {
         alert(data.error || UI_CONST.DELETE_ERROR_TEXT);
     }
+}
+
+function deleteLogModal(file_id) {
+    if (!file_id) return alert('Нет file_id для удаления!');
+    if (!confirm('Удалить лог?')) return;
+    fetch(`/log?file_id=${encodeURIComponent(file_id)}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(() => {
+            closeModal();
+            loadLogs();
+        });
 }

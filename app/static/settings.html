@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Настройка сервиса</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>whisperAPI Service</h1>
+        <form id="settingsForm">
+            <div class="settings-block">
+                <h2>Модели Whisper</h2>
+                <div id="modelCheckboxes" style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+                    <label class="styled-checkbox"><input type="checkbox" name="modelNames" value="tiny"><span class="checkmark"></span> tiny</label>
+                    <label class="styled-checkbox"><input type="checkbox" name="modelNames" value="base"><span class="checkmark"></span> base</label>
+                    <label class="styled-checkbox"><input type="checkbox" name="modelNames" value="small"><span class="checkmark"></span> small</label>
+                    <label class="styled-checkbox"><input type="checkbox" name="modelNames" value="medium"><span class="checkmark"></span> medium</label>
+                    <label class="styled-checkbox"><input type="checkbox" name="modelNames" value="large"><span class="checkmark"></span> large</label>
+                    <label class="styled-checkbox"><input type="checkbox" name="modelNames" value="large-v2"><span class="checkmark"></span> large-v2</label>
+                    <label class="styled-checkbox"><input type="checkbox" name="modelNames" value="large-v3"><span class="checkmark"></span> large-v3</label>
+                </div>
+            </div>
+            <div class="settings-block">
+                <h2>Webhook</h2>
+                <label>Интервал до вызова webhook (секунды):<br>
+                    <input type="number" id="webhookInterval" name="webhookInterval" min="1" style="width:100%">
+                </label>
+                <label class="styled-checkbox">Включить webhook-нотификатор:
+                    <input type="checkbox" id="webhookEnabled" name="webhookEnabled">
+                    <span class="checkmark"></span>
+                </label>
+                <label>Webhook URL:<br>
+                    <input type="text" id="webhookUrl" name="webhookUrl" style="width:100%">
+                </label>
+            </div>
+            <div class="settings-block">
+                <h2>Логирование</h2>
+                <label>URL для логирования задач:<br>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <input type="text" id="loggerApiUrl" name="loggerApiUrl" style="width:100%">
+                        <button type="button" class="open-log-btn" id="fillLoggerUrlBtn" title="Вставить адрес этого сервера">Вставить адрес</button>
+                    </div>
+                </label>
+            </div>
+            <div style="margin-top:12px;text-align:center;">
+                <button type="button" class="open-log-btn" id="rollbackBtn" style="background:#ff5555;">Откатить обновления</button>
+            </div>
+            <div style="margin-top:24px;text-align:center;">
+                <button type="submit" class="open-log-btn">Сохранить</button>
+                <button type="button" onclick="window.location.href='/'" class="open-log-btn" style="margin-left:12px;">Назад</button>
+            </div>
+            <div id="saveStatus" style="margin-top:18px;"></div>
+            <div id="loadingSpinner" style="display:none;justify-content:center;margin-top:18px;">
+                <div class="spinner"></div>
+                <span style="margin-left:12px;">Обновление репозитория...</span>
+            </div>
+        </form>
+    </div>
+    <script src="/static/settings.js"></script>
+</body>
+</html>

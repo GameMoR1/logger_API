@@ -7,8 +7,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pickle
 from .constants import *
+import json
+import tempfile
+import uuid
 
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
+
+INDEX_FILENAME = 'logs_index.json'
 
 class GDriveLogger:
     def __init__(self):
@@ -58,6 +63,39 @@ class GDriveLogger:
         folder = self.service.files().create(body=file_metadata, fields='id').execute()
         return folder.get('id')
 
+    def _get_or_create_index_file(self):
+        """
+        Возвращает file_id индекс-файла logs_index.json в LogerAPI_Logs на Google Диске или создаёт его, если нет.
+        """
+        # Убедиться, что корневая папка существует
+        root_folder_id = self._get_or_create_root_folder()
+        query = f"name='{INDEX_FILENAME}' and '{root_folder_id}' in parents and trashed=false"
+        results = self.service.files().list(q=query, fields="files(id, name)").execute()
+        items = results.get('files', [])
+        if items:
+            return items[0]['id']
+        # Создать пустой индекс-файл именно в LogerAPI_Logs
+        tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix='.json')
+        try:
+            with open(tmpfile.name, 'w', encoding='utf-8') as f:
+                json.dump([], f)
+            file_metadata = {
+                'name': INDEX_FILENAME,
+                'parents': [root_folder_id],
+                'mimeType': 'application/json'
+            }
+            media = MediaFileUpload(tmpfile.name, mimetype='application/json')
+            file = self.service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            return file.get('id')
+        except Exception as e:
+            print(f'[Google Drive ERROR]: Не удалось создать индекс-файл: {e}')
+            raise
+        finally:
+            try:
+                os.remove(tmpfile.name)
+            except Exception:
+                pass
+
     def log(self, data: Dict):
         date_str = datetime.now().strftime(DATE_FORMAT)
         folder_id = self._get_or_create_day_folder(date_str)
@@ -88,6 +126,38 @@ class GDriveLogger:
                     time.sleep(0.1)
             else:
                 print(f"[Google Drive ERROR]: Не удалось удалить временный файл {local_path}")
+
+    def log_and_return_id(self, data: Dict):
+        date_str = datetime.now().strftime(DATE_FORMAT)
+        folder_id = self._get_or_create_day_folder(date_str)
+        safe_received_at = data['received_at'].replace(':', '-').replace(' ', '_')
+        filename = f"{data['filename']}_{safe_received_at}{LOG_FILE_EXTENSION}"
+        local_path = f"/tmp/{filename}"
+        with open(local_path, 'w', encoding='utf-8') as f:
+            for k, v in data.items():
+                f.write(f"{k}: {v}\n")
+        file_metadata = {
+            'name': filename,
+            'parents': [folder_id]
+        }
+        media = MediaFileUpload(local_path, mimetype='text/plain')
+        file_id = None
+        try:
+            file = self.service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            file_id = file.get('id')
+        except Exception as e:
+            print(f"[Google Drive ERROR]: {e}")
+        finally:
+            import time
+            for _ in range(10):
+                try:
+                    os.remove(local_path)
+                    break
+                except PermissionError:
+                    time.sleep(0.1)
+            else:
+                print(f"[Google Drive ERROR]: Не удалось удалить временный файл {local_path}")
+        return file_id
 
     def list_all_logs(self):
         """
@@ -157,3 +227,80 @@ class GDriveLogger:
             self.service.files().delete(fileId=file_id).execute()
         except Exception as e:
             print(f"[Google Drive ERROR]: Не удалось удалить файл {file_id}: {e}")
+
+    def load_index(self):
+        """
+        Загружает и возвращает список логов из индекс-файла.
+        """
+        file_id = self._get_or_create_index_file()
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as tmpfile:
+            local_path = tmpfile.name
+        try:
+            self.download_log_file(file_id, local_path)
+            with open(local_path, encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+        finally:
+            try:
+                os.remove(local_path)
+            except Exception:
+                pass
+
+    def save_index(self, index_data):
+        """
+        Сохраняет index_data (list) в индекс-файл на Google Drive.
+        """
+        file_id = self._get_or_create_index_file()
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as tmpfile:
+            local_path = tmpfile.name
+        try:
+            with open(local_path, 'w', encoding='utf-8') as f:
+                json.dump(index_data, f, ensure_ascii=False)
+            media = MediaFileUpload(local_path, mimetype='application/json')
+            self.service.files().update(fileId=file_id, media_body=media).execute()
+        finally:
+            try:
+                os.remove(local_path)
+            except Exception:
+                pass
+
+    def add_log_to_index(self, log_entry):
+        index = self.load_index()
+        index.append(log_entry)
+        self.save_index(index)
+
+    def remove_log_from_index(self, file_id):
+        index = self.load_index()
+        index = [item for item in index if item.get('file_id') != file_id]
+        self.save_index(index)
+
+    def sync_index_with_drive(self):
+        """
+        Проверяет наличие и целостность logs_index.json на Google Диске, если повреждён или отсутствует — пересоздаёт.
+        """
+        try:
+            file_id = self._get_or_create_index_file()
+            # Пробуем скачать и прочитать файл
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as tmpfile:
+                local_path = tmpfile.name
+            try:
+                self.download_log_file(file_id, local_path)
+                with open(local_path, encoding='utf-8') as f:
+                    json.load(f)  # Проверка на валидность
+            except Exception as e:
+                print(f'[Google Drive ERROR]: Индекс-файл повреждён, пересоздаём: {e}')
+                self.save_index([])  # Пересоздать пустой
+            finally:
+                try:
+                    os.remove(local_path)
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f'[Google Drive ERROR]: Не удалось синхронизировать индекс-файл: {e}')
+
+    def ensure_index_consistency(self):
+        """
+        Гарантирует, что индекс-файл на Google Диске существует и валиден при запуске.
+        """
+        self.sync_index_with_drive()
