@@ -309,12 +309,12 @@ class GDriveLogger:
         """
         Сохраняет время последнего онлайна в файл last_online.txt в ту же папку, что и logs_index.json
         """
-        from io import BytesIO
+        import tempfile
+        from googleapiclient.http import MediaFileUpload
         # Получаем parent folder id из index-файла
         index_file_id = self.find_file_id_by_name('logs_index.json')
         parent_id = None
         if index_file_id:
-            # Получаем родительскую папку
             file = self.drive_service.files().get(fileId=index_file_id, fields='parents').execute()
             parents = file.get('parents', [])
             if parents:
@@ -325,18 +325,28 @@ class GDriveLogger:
         }
         if parent_id:
             file_metadata['parents'] = [parent_id]
-        media = BytesIO(dt_str.encode('utf-8'))
+        # Сохраняем строку во временный файл
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt', mode='w', encoding='utf-8') as tmpfile:
+            tmpfile.write(dt_str)
+            local_path = tmpfile.name
+        media = MediaFileUpload(local_path, mimetype='text/plain')
         file_id = self.find_file_id_by_name('last_online.txt')
-        if file_id:
-            self.drive_service.files().update(
-                fileId=file_id,
-                media_body=media
-            ).execute()
-        else:
-            self.drive_service.files().create(
-                body=file_metadata,
-                media_body=media
-            ).execute()
+        try:
+            if file_id:
+                self.drive_service.files().update(
+                    fileId=file_id,
+                    media_body=media
+                ).execute()
+            else:
+                self.drive_service.files().create(
+                    body=file_metadata,
+                    media_body=media
+                ).execute()
+        finally:
+            try:
+                os.remove(local_path)
+            except Exception:
+                pass
 
     def find_file_id_by_name(self, filename):
         """
