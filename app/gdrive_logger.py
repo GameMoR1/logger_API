@@ -304,3 +304,44 @@ class GDriveLogger:
         Гарантирует, что индекс-файл на Google Диске существует и валиден при запуске.
         """
         self.sync_index_with_drive()
+
+    def save_last_online(self, dt_str):
+        """
+        Сохраняет время последнего онлайна в файл last_online.txt в ту же папку, что и logs_index.json
+        """
+        from io import BytesIO
+        # Получаем parent folder id из index-файла
+        index_file_id = self.find_file_id_by_name('logs_index.json')
+        parent_id = None
+        if index_file_id:
+            # Получаем родительскую папку
+            file = self.drive_service.files().get(fileId=index_file_id, fields='parents').execute()
+            parents = file.get('parents', [])
+            if parents:
+                parent_id = parents[0]
+        file_metadata = {
+            'name': 'last_online.txt',
+            'mimeType': 'text/plain'
+        }
+        if parent_id:
+            file_metadata['parents'] = [parent_id]
+        media = BytesIO(dt_str.encode('utf-8'))
+        file_id = self.find_file_id_by_name('last_online.txt')
+        if file_id:
+            self.drive_service.files().update(
+                fileId=file_id,
+                media_body=media
+            ).execute()
+        else:
+            self.drive_service.files().create(
+                body=file_metadata,
+                media_body=media
+            ).execute()
+
+    def find_file_id_by_name(self, filename):
+        """
+        Возвращает file_id файла по имени, если найден, иначе None
+        """
+        results = self.drive_service.files().list(q=f"name='{filename}' and trashed=false", fields="files(id)").execute()
+        files = results.get('files', [])
+        return files[0]['id'] if files else None

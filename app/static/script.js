@@ -392,12 +392,17 @@ window.onload = async function() {
         try {
             statusSpan.textContent = 'Проверка...';
             statusSpan.classList.remove('on', 'off');
-            const resp = await fetch('https://3xd93p62vxzrvx-8000.proxy.runpod.net/api/status');
-            const data = await resp.json();
-            if (data && data.status === true) {
-                statusSpan.textContent = 'Включен';
-                statusSpan.classList.add('on');
-                lastOnline = new Date();
+            const resp = await fetch('/runpod_status');
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.status === true) {
+                    statusSpan.textContent = 'Включен';
+                    statusSpan.classList.add('on');
+                    lastOnline = new Date();
+                } else {
+                    statusSpan.textContent = 'Выключен';
+                    statusSpan.classList.add('off');
+                }
             } else {
                 statusSpan.textContent = 'Выключен';
                 statusSpan.classList.add('off');

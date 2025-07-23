@@ -271,3 +271,24 @@ async def settings_page():
     with open('app/static/settings.html', encoding='utf-8') as f:
         html = f.read()
     return HTMLResponse(html)
+
+@app.get('/runpod_status')
+async def runpod_status():
+    try:
+        resp = requests.get('https://3xd93p62vxzrvx-8000.proxy.runpod.net/api/status', timeout=5)
+        online = False
+        if resp.status_code == 200:
+            data = resp.json()
+            online = bool(data.get('status', False))
+        if online:
+            # Сохраняем время последнего онлайна на Google Drive
+            from datetime import datetime
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            try:
+                logger = GDriveLogger()
+                logger.save_last_online(now)
+            except Exception:
+                pass
+        return {'status': online}
+    except Exception:
+        return {'status': False}
